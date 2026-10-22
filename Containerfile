@@ -80,9 +80,11 @@ RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
     --mount=type=cache,target=/root/.cargo/git,sharing=locked \
     cargo fetch --locked
 
-# Build the web dashboard (gen-api + typescript build), no network
+# Build the web dashboard (gen-api + typescript build), no network.
+# The xtask target is a cache mount so a later CI build can reuse it.
 RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
     --mount=type=cache,target=/root/.cargo/git,sharing=locked \
+    --mount=type=cache,id=web-target,target=/src/target,sharing=locked \
     --network=none \
     <<-EOF
     set -e
@@ -254,9 +256,13 @@ RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
     --mount=type=cache,target=/root/.cargo/git,sharing=locked \
     cargo fetch
 
-# Offline build: release binaries with all channels
+# Offline build: release binaries with all channels.
+# /target is a cache mount. The binaries are copied into the image in this
+# same step; keeping the compile output here lets the next build skip crates
+# whose sources did not change.
 RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
     --mount=type=cache,target=/root/.cargo/git,sharing=locked \
+    --mount=type=cache,target=/target,sharing=locked \
     --network=none \
     <<-EOF
     set -e
